@@ -1,2 +1,2 @@
 # CODE.TJ
-CODE.TJ landing page
+CODE.TJ :: landing page
