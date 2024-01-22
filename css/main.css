@@ -1,7 +1,8 @@
-html, body {
-    height: 100%;
+html {
+  height: 100%;
 }
 body {
+  min-height: 100%;
   background-color: #333333;
   background-image: url('../img/code.tj_logo.png');
   background-position: center;
