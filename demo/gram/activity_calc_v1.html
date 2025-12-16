@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Activity matrix (po_created_at)</title>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<style>
+  :root{
+    --bg:#0b1220;
+    --card:#0f1a2e;
+    --card2:#0d1627;
+    --text:#e7eefc;
+    --muted:#a8b3cf;
+    --line:rgba(255,255,255,.10);
+    --line2:rgba(255,255,255,.06);
+    --accent:#60a5fa;
+    --accent2:#34d399;
+    --danger:#fb7185;
+
+    --radius:14px;
+    --radius-sm:10px;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+    --shadow-sm: 0 6px 18px rgba(0,0,0,.28);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    padding:28px;
+    background:
+      radial-gradient(1200px 800px at 15% 0%, rgba(96,165,250,.20), transparent 60%),
+      radial-gradient(900px 600px at 90% 10%, rgba(52,211,153,.14), transparent 55%),
+      linear-gradient(180deg, var(--bg), #060a14 70%);
+    color:var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    line-height:1.35;
+  }
+
+  h2{
+    margin:0 0 14px;
+    font-weight:800;
+    letter-spacing:-0.02em;
+    font-size:22px;
+  }
+
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:flex-end;
+    padding:14px;
+    border-radius:var(--radius);
+    background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    border:1px solid var(--line);
+    box-shadow:var(--shadow-sm);
+    backdrop-filter: blur(6px);
+  }
+
+  .controls label{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    font-size:12px;
+    color:var(--muted);
+    min-width: 180px;
+  }
+
+  input, select, button, textarea{
+    font: inherit;
+    color:var(--text);
+  }
+
+  input[type="date"],
+  input[type="number"],
+  select{
+    width: 100%;
+    padding:10px 12px;
+    border-radius:12px;
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--line);
+    outline:none;
+    transition: border-color .15s ease, transform .05s ease, background .15s ease;
+  }
+
+  input[type="date"]:focus,
+  input[type="number"]:focus,
+  select:focus{
+    border-color:rgba(96,165,250,.75);
+    background:rgba(255,255,255,.06);
+  }
+
+  button{
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid rgba(96,165,250,.45);
+    background:linear-gradient(180deg, rgba(96,165,250,.28), rgba(96,165,250,.14));
+    cursor:pointer;
+    font-weight:700;
+    transition: transform .06s ease, filter .15s ease, background .15s ease;
+    box-shadow: 0 10px 24px rgba(96,165,250,.12);
+  }
+  button:hover{ filter:brightness(1.08); }
+  button:active{ transform: translateY(1px); }
+
+  textarea{
+    width:100%;
+    min-height:240px;
+    margin-top:14px;
+    padding:14px;
+    border-radius:var(--radius);
+    background:rgba(0,0,0,.18);
+    border:1px solid var(--line);
+    box-shadow:var(--shadow-sm);
+    outline:none;
+    resize:vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size:12.5px;
+    line-height:1.45;
+  }
+  textarea:focus{ border-color:rgba(96,165,250,.65); }
+
+  .box{
+    margin-top:14px;
+    padding:14px;
+    border-radius:var(--radius);
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+    border:1px solid var(--line);
+    box-shadow:var(--shadow);
+    overflow:auto;
+  }
+
+  .stat{
+    font-size:18px;
+    font-weight:800;
+    letter-spacing:-0.02em;
+  }
+
+  .muted{
+    color:var(--muted);
+    font-size:12px;
+    margin-top:6px;
+  }
+
+  .err{
+    color:var(--danger);
+    font-weight:700;
+    white-space:pre-wrap;
+  }
+
+  hr{
+    border:none;
+    border-top:1px solid var(--line2);
+    margin:12px 0;
+  }
+
+  h3{
+    margin:10px 0 8px;
+    font-size:14px;
+    font-weight:800;
+    color:rgba(231,238,252,.95);
+  }
+
+  table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    margin-top:10px;
+    border-radius:14px;
+    overflow:hidden;
+    border:1px solid var(--line);
+    background:rgba(0,0,0,.16);
+  }
+
+  thead th{
+    position:sticky;
+    top:0;
+    z-index:5;
+    background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+    border-bottom:1px solid var(--line);
+    padding:10px 10px;
+    font-size:12px;
+    color:rgba(231,238,252,.92);
+    text-transform:none;
+    backdrop-filter: blur(6px);
+  }
+
+  tbody td{
+    padding:10px 10px;
+    border-bottom:1px solid var(--line2);
+    font-size:12.5px;
+    color:rgba(231,238,252,.90);
+    vertical-align:top;
+  }
+
+  tbody tr:hover td{
+    background:rgba(96,165,250,.06);
+  }
+
+  .sticky-col{
+    position:sticky;
+    left:0;
+    z-index:6;
+    background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+    border-right:1px solid var(--line2);
+    min-width: 160px;
+  }
+
+  .cell{
+    font-weight:800;
+    color:rgba(231,238,252,.98);
+  }
+
+  .sub{
+    display:block;
+    font-weight:500;
+    color:var(--muted);
+    font-size:11px;
+    margin-top:3px;
+  }
+
+  /* Скроллбар (аккуратно, только webkit) */
+  ::-webkit-scrollbar{ height:10px; width:10px; }
+  ::-webkit-scrollbar-thumb{
+    background: rgba(255,255,255,.12);
+    border-radius: 999px;
+    border: 2px solid rgba(0,0,0,.2);
+  }
+  ::-webkit-scrollbar-track{ background: rgba(0,0,0,.12); }
+
+  /* Мобилки */
+  @media (max-width: 720px){
+    body{ padding:16px; }
+    .controls label{ min-width: 100%; }
+    .sticky-col{ min-width: 120px; }
+  }
+</style>
+
+
+</head>
+<body>
+
+<h2>Матрица o_status_id × po_status_id (по po_created_at)</h2>
+
+<div class="controls">
+  <label>
+    Дата (UTC):
+    <input type="date" id="date">
+  </label>
+
+  <label>
+    performer_id (опционально):
+    <input type="number" id="performerId" placeholder="8330">
+  </label>
+
+  <label>
+    Что показывать в ячейках:
+    <select id="metric">
+      <option value="count" selected>count</option>
+      <option value="sumActivity">Σ activity_change</option>
+    </select>
+  </label>
+
+  <label>
+    Показать вторую метрику мелким:
+    <select id="showSecondary">
+      <option value="yes" selected>да</option>
+      <option value="no">нет</option>
+    </select>
+  </label>
+
+  <button id="calc">Посчитать</button>
+</div>
+
+<br>
+
+<textarea id="json" placeholder="Вставь JSON ответа API целиком"></textarea>
+
+<div id="result" class="box"></div>
+
+<script>
+$(function () {
+
+  function getDayFromISO(iso) {
+    // po_created_at с Z -> UTC, берём YYYY-MM-DD без Date()
+    if (!iso || typeof iso !== 'string') return null;
+    return iso.substring(0, 10);
+  }
+
+  function num(v) {
+    v = Number(v);
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (ch) {
+      return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[ch];
+    });
+  }
+
+  function sortNumeric(a, b) {
+    // a/b могут быть числами или строками-числами
+    return Number(a) - Number(b);
+  }
+
+  $('#calc').on('click', function () {
+    $('#result').empty();
+
+    const raw = $('#json').val().trim();
+    const day = $('#date').val();
+    const performerId = $('#performerId').val();
+    const metric = $('#metric').val(); // count | sumActivity
+    const showSecondary = $('#showSecondary').val() === 'yes';
+
+    if (!raw) return $('#result').html('<div class="err">JSON пуст</div>');
+    if (!day) return $('#result').html('<div class="err">Дата не выбрана</div>');
+
+    let data;
+    try { data = JSON.parse(raw); }
+    catch (e) { return $('#result').html('<div class="err">Некорректный JSON</div>'); }
+
+    const items = data?.result?.items;
+    if (!Array.isArray(items)) return $('#result').html('<div class="err">result.items не найден</div>');
+
+    const filtered = items.filter(function (it) {
+      if (performerId && String(it.performer_id) !== String(performerId)) return false;
+      return getDayFromISO(it.po_created_at) === day;
+    });
+
+    // Базовые суммы
+    let totalActivity = 0, base = 0, bonus = 0, penalty = 0;
+    $.each(filtered, function (_, it) {
+      totalActivity += num(it.activity_change);
+      base += num(it.base_points);
+      bonus += num(it.bonus_points);
+      penalty += num(it.penalty_points);
+    });
+
+    // Pivot:
+    // rows = o_status_id, cols = po_status_id
+    // cell = {count, sumActivity}
+    const rowSet = new Set();
+    const colSet = new Set();
+    const pivot = {}; // pivot[oId][poId] = {count, sumActivity}
+
+    // (опционально) для подписи названий
+    const oName = {};   // o_status_id -> o_status
+    const poName = {};  // po_status_id -> po_status
+
+    $.each(filtered, function (_, it) {
+      const oId = it.o_status_id;
+      const poId = it.po_status_id;
+      rowSet.add(String(oId));
+      colSet.add(String(poId));
+
+      if (it.o_status && oName[String(oId)] == null) oName[String(oId)] = it.o_status;
+      if (it.po_status && poName[String(poId)] == null) poName[String(poId)] = it.po_status;
+
+      pivot[String(oId)] = pivot[String(oId)] || {};
+      pivot[String(oId)][String(poId)] = pivot[String(oId)][String(poId)] || { count: 0, sumActivity: 0 };
+
+      pivot[String(oId)][String(poId)].count += 1;
+      pivot[String(oId)][String(poId)].sumActivity += num(it.activity_change);
+    });
+
+    const rows = Array.from(rowSet).sort(sortNumeric);
+    const cols = Array.from(colSet).sort(sortNumeric);
+
+    // Итоги по строкам/столбцам
+    const rowTotals = {}; // oId -> {count, sumActivity}
+    const colTotals = {}; // poId -> {count, sumActivity}
+    let grand = {count: 0, sumActivity: 0};
+
+    rows.forEach(function (oId) {
+      rowTotals[oId] = {count: 0, sumActivity: 0};
+      cols.forEach(function (poId) {
+        const cell = (pivot[oId] && pivot[oId][poId]) ? pivot[oId][poId] : {count:0, sumActivity:0};
+        rowTotals[oId].count += cell.count;
+        rowTotals[oId].sumActivity += cell.sumActivity;
+
+        colTotals[poId] = colTotals[poId] || {count: 0, sumActivity: 0};
+        colTotals[poId].count += cell.count;
+        colTotals[poId].sumActivity += cell.sumActivity;
+
+        grand.count += cell.count;
+        grand.sumActivity += cell.sumActivity;
+      });
+    });
+	
+	
+
+    // Рендер
+    let html = `
+      <div class="stat">Записей: ${filtered.length}</div>
+      <div class="stat">Σ activity_change: ${totalActivity}</div>
+      <div class="muted">Фильтр: дата(UTC) <b>${esc(day)}</b> по <b>po_created_at</b>${performerId ? `, performer_id <b>${esc(performerId)}</b>` : ''}</div>
+      <hr>
+      <div class="muted">Σ base_points: <b>${base}</b> · Σ bonus_points: <b>${bonus}</b> · Σ penalty_points: <b>${penalty}</b></div>
+      <hr>
+      <h3>Матрица (строки: o_status_id, столбцы: po_status_id)</h3>
+    `;
+
+    if (!rows.length || !cols.length) {
+      html += `<div class="muted">Нет данных за выбранный день.</div>`;
+      $('#result').html(html);
+      return;
+    }
+
+    // Заголовок таблицы
+    html += `<div class="muted">В ячейке: <b>${metric === 'count' ? 'count' : 'Σ activity_change'}</b>${showSecondary ? ' (вторая метрика показана мелким)' : ''}</div>`;
+    html += `<table><thead><tr>`;
+    html += `<th class="sticky-col">o_status_id</th>`;
+    cols.forEach(function (poId) {
+      const name = poName[poId] ? ` <span class="sub">${esc(poName[poId])}</span>` : '';
+      html += `<th>${esc(poId)}${name}</th>`;
+    });
+    html += `<th>Итого</th>`;
+    html += `</tr></thead><tbody>`;
+
+    // Тело таблицы
+    rows.forEach(function (oId) {
+      const rowLabel = oName[oId] ? ` <span class="sub">${esc(oName[oId])}</span>` : '';
+      html += `<tr>`;
+      html += `<td class="sticky-col"><b>${esc(oId)}</b>${rowLabel}</td>`;
+
+      cols.forEach(function (poId) {
+        const cell = (pivot[oId] && pivot[oId][poId]) ? pivot[oId][poId] : {count:0, sumActivity:0};
+        const primary = metric === 'count' ? cell.count : cell.sumActivity;
+        const secondary = metric === 'count' ? cell.sumActivity : cell.count;
+
+        html += `<td>`;
+        html += `<span class="cell">${esc(primary)}</span>`;
+        if (showSecondary) {
+          html += `<span class="sub">${metric === 'count' ? 'Σact' : 'count'}: ${esc(secondary)}</span>`;
+        }
+        html += `</td>`;
+      });
+
+      // Row total
+      const rt = rowTotals[oId];
+      const primaryRT = metric === 'count' ? rt.count : rt.sumActivity;
+      const secondaryRT = metric === 'count' ? rt.sumActivity : rt.count;
+
+      html += `<td><span class="cell">${esc(primaryRT)}</span>`;
+      if (showSecondary) html += `<span class="sub">${metric === 'count' ? 'Σact' : 'count'}: ${esc(secondaryRT)}</span>`;
+      html += `</td>`;
+
+      html += `</tr>`;
+    });
+
+    // Footer totals row
+    html += `<tr>`;
+    html += `<td class="sticky-col"><b>Итого</b></td>`;
+    cols.forEach(function (poId) {
+      const ct = colTotals[poId] || {count:0, sumActivity:0};
+      const primaryCT = metric === 'count' ? ct.count : ct.sumActivity;
+      const secondaryCT = metric === 'count' ? ct.sumActivity : ct.count;
+
+      html += `<td><span class="cell">${esc(primaryCT)}</span>`;
+      if (showSecondary) html += `<span class="sub">${metric === 'count' ? 'Σact' : 'count'}: ${esc(secondaryCT)}</span>`;
+      html += `</td>`;
+    });
+
+    const primaryG = metric === 'count' ? grand.count : grand.sumActivity;
+    const secondaryG = metric === 'count' ? grand.sumActivity : grand.count;
+
+    html += `<td><span class="cell">${esc(primaryG)}</span>`;
+    if (showSecondary) html += `<span class="sub">${metric === 'count' ? 'Σact' : 'count'}: ${esc(secondaryG)}</span>`;
+    html += `</td>`;
+
+    html += `</tr>`;
+
+    html += `</tbody></table>`;
+
+    $('#result').html(html);
+  });
+
+  // Устанавливаем сегодняшнюю дату (UTC) по умолчанию
+  (function setTodayUtc() {
+    const now = new Date();
+    const yyyy = now.getUTCFullYear();
+    const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(now.getUTCDate()).padStart(2, '0');
+    $('#date').val(`${yyyy}-${mm}-${dd}`);
+  })();
+
+
+});
+</script>
+
+</body>
+</html>
