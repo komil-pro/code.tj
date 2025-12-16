@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Activity matrix (po_created_at)</title>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b1220; --card:#0f1a2e; --text:#e7eefc; --muted:#a8b3cf;
+      --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.06);
+      --danger:#fb7185; --radius:14px; --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; padding:24px;
+      background:
+        radial-gradient(1200px 800px at 15% 0%, rgba(96,165,250,.20), transparent 60%),
+        radial-gradient(900px 600px at 90% 10%, rgba(52,211,153,.14), transparent 55%),
+        linear-gradient(180deg, var(--bg), #060a14 70%);
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      line-height:1.35;
+    }
+    h2{ margin:0 0 14px; font-weight:800; letter-spacing:-0.02em; font-size:22px; }
+    .controls{
+      display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;
+      padding:14px; border-radius:var(--radius);
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line); box-shadow:var(--shadow);
+      backdrop-filter: blur(6px);
+    }
+    .controls label{ display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--muted); min-width:200px; }
+    input, select, button, textarea{ font: inherit; color:var(--text); }
+    input[type="date"], input[type="number"], input[type="url"], select{
+      width:100%; padding:10px 12px; border-radius:12px;
+      background:rgba(255,255,255,.04); border:1px solid var(--line);
+      outline:none;
+    }
+    input:focus, select:focus{ border-color:rgba(96,165,250,.75); background:rgba(255,255,255,.06); }
+    button{
+      padding:10px 14px; border-radius:12px;
+      border:1px solid rgba(96,165,250,.45);
+      background:linear-gradient(180deg, rgba(96,165,250,.28), rgba(96,165,250,.14));
+      cursor:pointer; font-weight:800;
+    }
+    button:active{ transform: translateY(1px); }
+    textarea{
+      width:100%; min-height:220px; margin-top:14px; padding:14px;
+      border-radius:var(--radius); background:rgba(0,0,0,.18);
+      border:1px solid var(--line); outline:none; resize:vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      font-size:12.5px; line-height:1.45;
+    }
+    .box{
+      margin-top:14px; padding:14px; border-radius:var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border:1px solid var(--line); box-shadow:var(--shadow); overflow:auto;
+    }
+    .stat{ font-size:18px; font-weight:900; letter-spacing:-0.02em; }
+    .muted{ color:var(--muted); font-size:12px; margin-top:6px; }
+    .err{ color:var(--danger); font-weight:800; white-space:pre-wrap; }
+    hr{ border:none; border-top:1px solid var(--line2); margin:12px 0; }
+    h3{ margin:10px 0 8px; font-size:14px; font-weight:900; }
+    table{
+      width:100%; border-collapse:separate; border-spacing:0;
+      margin-top:10px; border-radius:14px; overflow:hidden;
+      border:1px solid var(--line); background:rgba(0,0,0,.16);
+    }
+    thead th{
+      position:sticky; top:0; z-index:5;
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+      border-bottom:1px solid var(--line);
+      padding:10px; font-size:12px;
+      backdrop-filter: blur(6px);
+    }
+    tbody td{
+      padding:10px; border-bottom:1px solid var(--line2);
+      font-size:12.5px; vertical-align:top;
+    }
+    tbody tr:hover td{ background:rgba(96,165,250,.06); }
+    .sticky-col{
+      position:sticky; left:0; z-index:6;
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+      border-right:1px solid var(--line2);
+      min-width:160px;
+    }
+    .cell{ font-weight:900; }
+    .sub{ display:block; font-weight:500; color:var(--muted); font-size:11px; margin-top:3px; }
+    @media (max-width: 720px){
+      body{ padding:16px; }
+      .controls label{ min-width:100%; }
+      .sticky-col{ min-width:120px; }
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Матрица o_status_id × po_status_id (по po_created_at)</h2>
+
+  <div class="controls">
+    <label>
+      Дата (UTC)
+      <input type="date" id="date">
+    </label>
+
+    <label>
+      performer_id (опционально)
+      <input type="number" id="performerId" placeholder="8330">
+    </label>
+
+    <label>
+      Метрика в ячейках
+      <select id="metric">
+        <option value="count" selected>count</option>
+        <option value="sumActivity">Σ activity_change</option>
+      </select>
+    </label>
+
+    <label>
+      Показывать вторую метрику мелким
+      <select id="showSecondary">
+        <option value="yes" selected>да</option>
+        <option value="no">нет</option>
+      </select>
+    </label>
+
+    <label>
+      JSON URL (опционально)
+      <input type="url" id="jsonUrl" placeholder="https://.../stat.json">
+    </label>
+
+    <button id="loadJson">Загрузить JSON</button>
+    <button id="calc">Посчитать</button>
+  </div>
+
+  <textarea id="json" placeholder="Можно вставить JSON сюда вручную (result.items)"></textarea>
+
+  <div id="result" class="box"></div>
+
+<script>
+$(function(){
+
+  // ---------- helpers ----------
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[ch]));
+  }
+  function num(v){ v = Number(v); return Number.isFinite(v) ? v : 0; }
+  function getDayFromISO(iso){ return (iso && typeof iso === 'string') ? iso.substring(0,10) : null; }
+  function sortNumeric(a,b){ return Number(a) - Number(b); }
+
+  function qs(){
+    const p = new URLSearchParams(window.location.search);
+    const obj = {};
+    p.forEach((v,k)=> obj[k]=v);
+    return obj;
+  }
+  function todayUtc(){
+    const d = new Date();
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth()+1).padStart(2,'0');
+    const dd = String(d.getUTCDate()).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function setResult(html){ $('#result').html(html); }
+  function setError(msg){ setResult(`<div class="err">${esc(msg)}</div>`); }
+
+  function extractItems(data){
+    const items = data?.result?.items;
+    if (!Array.isArray(items)) throw new Error("result.items не найден (ожидается массив)");
+    return items;
+  }
+
+  // ---------- core render ----------
+  function renderMatrix(items){
+    const day = $('#date').val();
+    const performerId = $('#performerId').val();
+    const metric = $('#metric').val(); // count|sumActivity
+    const showSecondary = $('#showSecondary').val() === 'yes';
+
+    if (!day) throw new Error("Дата не выбрана");
+
+    const filtered = items.filter(it => {
+      if (performerId && String(it.performer_id) !== String(performerId)) return false;
+      return getDayFromISO(it.po_created_at) === day;
+    });
+
+    let totalActivity = 0, base = 0, bonus = 0, penalty = 0;
+    $.each(filtered, (_, it)=>{
+      totalActivity += num(it.activity_change);
+      base += num(it.base_points);
+      bonus += num(it.bonus_points);
+      penalty += num(it.penalty_points);
+    });
+
+    const rowSet = new Set(), colSet = new Set();
+    const pivot = {}; // pivot[oId][poId] = {count,sumActivity}
+    const oName = {}, poName = {};
+
+    $.each(filtered, (_, it)=>{
+      const oId = String(it.o_status_id);
+      const poId = String(it.po_status_id);
+      rowSet.add(oId); colSet.add(poId);
+
+      if (it.o_status && oName[oId] == null) oName[oId] = it.o_status;
+      if (it.po_status && poName[poId] == null) poName[poId] = it.po_status;
+
+      pivot[oId] = pivot[oId] || {};
+      pivot[oId][poId] = pivot[oId][poId] || {count:0, sumActivity:0};
+      pivot[oId][poId].count += 1;
+      pivot[oId][poId].sumActivity += num(it.activity_change);
+    });
+
+    const rows = Array.from(rowSet).sort(sortNumeric);
+    const cols = Array.from(colSet).sort(sortNumeric);
+
+    if (!rows.length || !cols.length){
+      return `
+        <div class="stat">Записей: 0</div>
+        <div class="muted">Нет данных за выбранную дату (UTC): <b>${esc(day)}</b></div>
+      `;
+    }
+
+    const rowTotals = {}, colTotals = {};
+    let grand = {count:0, sumActivity:0};
+
+    rows.forEach(oId=>{
+      rowTotals[oId] = {count:0, sumActivity:0};
+      cols.forEach(poId=>{
+        const cell = (pivot[oId] && pivot[oId][poId]) ? pivot[oId][poId] : {count:0, sumActivity:0};
+        rowTotals[oId].count += cell.count;
+        rowTotals[oId].sumActivity += cell.sumActivity;
+
+        colTotals[poId] = colTotals[poId] || {count:0, sumActivity:0};
+        colTotals[poId].count += cell.count;
+        colTotals[poId].sumActivity += cell.sumActivity;
+
+        grand.count += cell.count;
+        grand.sumActivity += cell.sumActivity;
+      });
+    });
+
+    let html = `
+      <div class="stat">Записей: ${filtered.length}</div>
+      <div class="stat">Σ activity_change: ${totalActivity}</div>
+      <div class="muted">Дата(UTC): <b>${esc(day)}</b> · поле: <b>po_created_at</b>${performerId ? ` · performer_id: <b>${esc(performerId)}</b>` : ''}</div>
+      <hr>
+      <div class="muted">Σ base_points: <b>${base}</b> · Σ bonus_points: <b>${bonus}</b> · Σ penalty_points: <b>${penalty}</b></div>
+      <hr>
+      <h3>Матрица (строки: o_status_id, столбцы: po_status_id)</h3>
+      <div class="muted">Ячейка: <b>${metric === 'count' ? 'count' : 'Σ activity_change'}</b>${showSecondary ? ' (вторая метрика мелким)' : ''}</div>
+      <table>
+        <thead>
+          <tr>
+            <th class="sticky-col">o_status_id</th>
+            ${cols.map(poId=>{
+              const name = poName[poId] ? `<span class="sub">${esc(poName[poId])}</span>` : '';
+              return `<th>${esc(poId)}${name}</th>`;
+            }).join('')}
+            <th>Итого</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    rows.forEach(oId=>{
+      const rowLabel = oName[oId] ? `<span class="sub">${esc(oName[oId])}</span>` : '';
+      html += `<tr><td class="sticky-col"><span class="cell">${esc(oId)}</span>${rowLabel}</td>`;
+
+      cols.forEach(poId=>{
+        const cell = (pivot[oId] && pivot[oId][poId]) ? pivot[oId][poId] : {count:0, sumActivity:0};
+        const primary = metric === 'count' ? cell.count : cell.sumActivity;
+        const secondary = metric === 'count' ? cell.sumActivity : cell.count;
+
+        html += `<td><span class="cell">${esc(primary)}</span>`;
+        if (showSecondary) html += `<span class="sub">${metric === 'count' ? 'Σact' : 'count'}: ${esc(secondary)}</span>`;
+        html += `</td>`;
+      });
+
+      const rt = rowTotals[oId];
+      const primaryRT = metric === 'count' ? rt.count : rt.sumActivity;
+      const secondaryRT = metric === 'count' ? rt.sumActivity : rt.count;
+
+      html += `<td><span class="cell">${esc(primaryRT)}</span>`;
+      if (showSecondary) html += `<span class="sub">${metric === 'count' ? 'Σact' : 'count'}: ${esc(secondaryRT)}</span>`;
+      html += `</td></tr>`;
+    });
+
+    // totals row
+    html += `<tr><td class="sticky-col"><span class="cell">Итого</span></td>`;
+    cols.forEach(poId=>{
+      const ct = colTotals[poId] || {count:0, sumActivity:0};
+      const primaryCT = metric === 'count' ? ct.count : ct.sumActivity;
+      const secondaryCT = metric === 'count' ? ct.sumActivity : ct.count;
+
+      html += `<td><span class="cell">${esc(primaryCT)}</span>`;
+      if (showSecondary) html += `<span class="sub">${metric === 'count' ? 'Σact' : 'count'}: ${esc(secondaryCT)}</span>`;
+      html += `</td>`;
+    });
+
+    const primaryG = metric === 'count' ? grand.count : grand.sumActivity;
+    const secondaryG = metric === 'count' ? grand.sumActivity : grand.count;
+
+    html += `<td><span class="cell">${esc(primaryG)}</span>`;
+    if (showSecondary) html += `<span class="sub">${metric === 'count' ? 'Σact' : 'count'}: ${esc(secondaryG)}</span>`;
+    html += `</td></tr>`;
+
+    html += `</tbody></table>`;
+    return html;
+  }
+
+  // ---------- JSON loading ----------
+  async function loadJsonFromUrl(url){
+    if (!url) throw new Error("json_url пуст");
+    setResult(`<div class="muted">Загружаю JSON…</div>`);
+
+    // Важно: CORS может заблокировать запрос в браузере.
+    // Если твой API не отдаёт Access-Control-Allow-Origin, запрос упадёт.
+    return $.ajax({
+      url,
+      method: 'GET',
+      dataType: 'json',
+      timeout: 15000
+    });
+  }
+
+  // ---------- init from GET ----------
+  (function init(){
+    const p = qs();
+
+    // date: из GET или today UTC
+    $('#date').val(p.date || todayUtc());
+
+    // optional params
+    if (p.performer_id) $('#performerId').val(p.performer_id);
+    if (p.metric && (p.metric === 'count' || p.metric === 'sumActivity')) $('#metric').val(p.metric);
+    if (p.show_secondary && (p.show_secondary === 'yes' || p.show_secondary === 'no')) $('#showSecondary').val(p.show_secondary);
+
+    // json_url: если есть — подставим и попробуем загрузить
+    if (p.json_url){
+      const decoded = decodeURIComponent(p.json_url);
+      $('#jsonUrl').val(decoded);
+
+      loadJsonFromUrl(decoded)
+        .done(function(data){
+          $('#json').val(JSON.stringify(data, null, 2));
+          try{
+            const items = extractItems(data);
+            setResult(renderMatrix(items));
+          }catch(e){
+            setError(e.message || String(e));
+          }
+        })
+        .fail(function(xhr, status, err){
+          setError(
+            "Не удалось загрузить JSON по URL.\n" +
+            "Причины: CORS на сервере, 401/403, неверный URL, таймаут.\n" +
+            `status=${status}, err=${err || ''}`
+          );
+        });
+    } else {
+      setResult(`<div class="muted">Вставь JSON или укажи json_url в GET / поле и нажми «Загрузить JSON».</div>`);
+    }
+  })();
+
+  // ---------- UI actions ----------
+  $('#loadJson').on('click', function(){
+    const url = $('#jsonUrl').val().trim();
+    loadJsonFromUrl(url)
+      .done(function(data){
+        $('#json').val(JSON.stringify(data, null, 2));
+        try{
+          const items = extractItems(data);
+          setResult(renderMatrix(items));
+        }catch(e){
+          setError(e.message || String(e));
+        }
+      })
+      .fail(function(xhr, status, err){
+        setError(
+          "Не удалось загрузить JSON по URL.\n" +
+          "Если это твой API — включи CORS (Access-Control-Allow-Origin) или проксируй через backend.\n" +
+          `status=${status}, err=${err || ''}`
+        );
+      });
+  });
+
+  $('#calc').on('click', function(){
+    try{
+      const raw = $('#json').val().trim();
+      if (!raw) throw new Error("JSON пуст");
+      const data = JSON.parse(raw);
+      const items = extractItems(data);
+      setResult(renderMatrix(items));
+    }catch(e){
+      setError(e.message || String(e));
+    }
+  });
+
+});
+</script>
+</body>
+</html>
